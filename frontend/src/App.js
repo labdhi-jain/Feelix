@@ -1,29 +1,56 @@
-import React, { useRef } from "react";
+import React, { useRef, useState } from "react";
 import Webcam from "react-webcam";
 import axios from "axios";
 
 function App() {
   const webcamRef = useRef(null);
+  const [emotion, setEmotion] = useState("");
+  const [loading, setLoading] = useState(false);
 
   const capture = async () => {
-    const imageSrc = webcamRef.current.getScreenshot();
+    try {
+      setLoading(true);
+      const imageSrc = webcamRef.current.getScreenshot();
 
-    const res = await axios.post("http://127.0.0.1:5000/detect", {
-      image: imageSrc,
-    });
+      const res = await axios.post("http://localhost:5000/detect", {
+        image: imageSrc,
+      });
 
-    alert("Detected Emotion: " + res.data.emotion);
+      setEmotion(res.data.emotion);
+      setLoading(false);
+    } catch (error) {
+      console.error(error);
+      setEmotion("Error detecting emotion");
+      setLoading(false);
+    }
   };
 
   return (
-    <div>
-      <h1>Feelix</h1>
+    <div style={{ textAlign: "center", padding: "20px" }}>
+      <h1>Feelix 🎵</h1>
+
       <Webcam
         audio={false}
         ref={webcamRef}
         screenshotFormat="image/jpeg"
+        width={400}
       />
-      <button onClick={capture}>Detect Emotion</button>
+
+      <br /><br />
+
+      <button onClick={capture} style={{ padding: "10px 20px" }}>
+        Detect Emotion
+      </button>
+
+      <br /><br />
+
+      {loading && <h3>Analyzing emotion...</h3>}
+
+      {emotion && !loading && (
+        <h2>
+          Detected Emotion: <span style={{ color: "purple" }}>{emotion}</span>
+        </h2>
+      )}
     </div>
   );
 }
