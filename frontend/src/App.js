@@ -1,23 +1,29 @@
-import logo from './logo.svg';
-import './App.css';
+import React, { useRef } from "react";
+import Webcam from "react-webcam";
+import axios from "axios";
 
 function App() {
+  const webcamRef = useRef(null);
+
+  const capture = async () => {
+    const imageSrc = webcamRef.current.getScreenshot();
+
+    const res = await axios.post("http://127.0.0.1:5000/detect", {
+      image: imageSrc,
+    });
+
+    alert("Detected Emotion: " + res.data.emotion);
+  };
+
   return (
-    <div className="App">
-      <header className="App-header">
-        <img src={logo} className="App-logo" alt="logo" />
-        <p>
-          Edit <code>src/App.js</code> and save to reload.
-        </p>
-        <a
-          className="App-link"
-          href="https://reactjs.org"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          Learn React
-        </a>
-      </header>
+    <div>
+      <h1>Feelix</h1>
+      <Webcam
+        audio={false}
+        ref={webcamRef}
+        screenshotFormat="image/jpeg"
+      />
+      <button onClick={capture}>Detect Emotion</button>
     </div>
   );
 }
