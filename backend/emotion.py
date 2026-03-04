@@ -8,5 +8,11 @@ def detect_emotion(image_data):
     np_arr = np.frombuffer(img_bytes, np.uint8)
     img = cv2.imdecode(np_arr, cv2.IMREAD_COLOR)
 
-    result = DeepFace.analyze(img, actions=['emotion'], enforce_detection=False)
+    result = DeepFace.analyze(
+        img,
+        actions=['emotion'],
+        enforce_detection=False,
+        detector_backend='opencv'   # 🔥 THIS IS THE FIX
+    )
+
     return result[0]['dominant_emotion']
