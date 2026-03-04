@@ -1,3 +1,4 @@
+import Analytics from "./Analytics";
 import React, { useRef, useState } from "react";
 import Webcam from "react-webcam";
 import axios from "axios";
@@ -51,6 +52,7 @@ function App() {
           Detected Emotion: <span style={{ color: "red" }}>{emotion}</span>
         </h2>
       )}
+      <Analytics />
     </div>
   );
 }
