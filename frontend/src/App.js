@@ -27,7 +27,7 @@ function App() {
 
   return (
     <div style={{ textAlign: "center", padding: "20px" }}>
-      <h1>Feelix 🎵</h1>
+      <h1>Feelix</h1>
 
       <Webcam
         audio={false}
@@ -48,7 +48,7 @@ function App() {
 
       {emotion && !loading && (
         <h2>
-          Detected Emotion: <span style={{ color: "purple" }}>{emotion}</span>
+          Detected Emotion: <span style={{ color: "red" }}>{emotion}</span>
         </h2>
       )}
     </div>

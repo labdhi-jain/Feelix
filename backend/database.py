@@ -1,7 +1,10 @@
 import sqlite3
 
+def get_connection():
+    return sqlite3.connect("feelix.db")
+
 def init_db():
-    conn = sqlite3.connect("feelix.db")
+    conn = get_connection()
     cursor = conn.cursor()
 
     cursor.execute("""
@@ -15,7 +18,6 @@ def init_db():
     cursor.execute("""
     CREATE TABLE IF NOT EXISTS emotions (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
-        user_id INTEGER,
         emotion TEXT,
         timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
     )
@@ -23,3 +25,22 @@ def init_db():
 
     conn.commit()
     conn.close()
+
+def save_emotion(emotion):
+    conn = get_connection()
+    cursor = conn.cursor()
+
+    cursor.execute("INSERT INTO emotions (emotion) VALUES (?)", (emotion,))
+    
+    conn.commit()
+    conn.close()
+
+def get_emotions():
+    conn = get_connection()
+    cursor = conn.cursor()
+
+    cursor.execute("SELECT emotion, timestamp FROM emotions ORDER BY timestamp DESC")
+    data = cursor.fetchall()
+
+    conn.close()
+    return data
