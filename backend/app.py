@@ -1,3 +1,4 @@
+from flask_cors import CORS
 import bcrypt
 from database import create_user, get_user
 from flask import Flask, jsonify

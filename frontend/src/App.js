@@ -1,59 +1,25 @@
-import Analytics from "./Analytics";
-import React, { useRef, useState } from "react";
-import Webcam from "react-webcam";
-import axios from "axios";
+import { BrowserRouter, Routes, Route } from "react-router-dom";
+
+import Login from "./pages/Login";
+import Register from "./pages/Register";
+import Dashboard from "./pages/Dashboard";
 
 function App() {
-  const webcamRef = useRef(null);
-  const [emotion, setEmotion] = useState("");
-  const [loading, setLoading] = useState(false);
-
-  const capture = async () => {
-    try {
-      setLoading(true);
-      const imageSrc = webcamRef.current.getScreenshot();
-
-      const res = await axios.post("http://localhost:5000/detect", {
-        image: imageSrc,
-      });
-
-      setEmotion(res.data.emotion);
-      setLoading(false);
-    } catch (error) {
-      console.error(error);
-      setEmotion("Error detecting emotion");
-      setLoading(false);
-    }
-  };
 
   return (
-    <div style={{ textAlign: "center", padding: "20px" }}>
-      <h1>Feelix</h1>
+    <BrowserRouter>
 
-      <Webcam
-        audio={false}
-        ref={webcamRef}
-        screenshotFormat="image/jpeg"
-        width={400}
-      />
+      <Routes>
 
-      <br /><br />
+        <Route path="/" element={<Login />} />
 
-      <button onClick={capture} style={{ padding: "10px 20px" }}>
-        Detect Emotion
-      </button>
+        <Route path="/register" element={<Register />} />
 
-      <br /><br />
+        <Route path="/dashboard" element={<Dashboard />} />
 
-      {loading && <h3>Analyzing emotion...</h3>}
+      </Routes>
 
-      {emotion && !loading && (
-        <h2>
-          Detected Emotion: <span style={{ color: "red" }}>{emotion}</span>
-        </h2>
-      )}
-      <Analytics />
-    </div>
+    </BrowserRouter>
   );
 }
 

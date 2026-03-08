@@ -29,7 +29,7 @@ function Dashboard() {
   return (
     <div style={{ textAlign: "center" }}>
 
-      <h1>Feelix Dashboard</h1>
+      <h1>Feelix</h1>
 
       <Webcam
         audio={false}
