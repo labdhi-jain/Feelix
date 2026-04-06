@@ -6,6 +6,8 @@ from flask_cors import CORS
 from flask import request
 from emotion import detect_emotion
 from database import init_db, save_emotion, get_emotions
+from spotify import get_auth_url, get_token
+import spotipy
 
 init_db()
 
@@ -66,6 +68,49 @@ def login():
 @app.route("/")
 def home():
     return jsonify({"message": "Feelix Backend Running"})
+
+@app.route("/spotify/login")
+def spotify_login():
+    url = get_auth_url()
+    return jsonify({"url": url})
+
+@app.route("/spotify/callback")
+def spotify_callback():
+    code = request.args.get("code")
+    token = get_token(code)
+    return jsonify(token)
+
+emotion_playlists = {
+    "happy": "37i9dQZF1DXdPec7aLTmlC",
+    "sad": "37i9dQZF1DX7qK8ma5wgG1",
+    "angry": "37i9dQZF1DWYxwmBaMqxsl",
+    "neutral": "37i9dQZF1DX4WYpdgoIcn6"
+}
+
+@app.route("/spotify/play", methods=["POST"])
+def play_music():
+    data = request.json
+    emotion = data("emotion")
+    token = data("token")
+
+    sp = spotipy.Spotify(auth=token)
+    devices = sp.devices()
+
+    if not devices["devices"]:
+        return jsonify({"error": "No active Spotify device found. Open Spotify app."})
+
+    device_id = devices["devices"][0]["id"]
+
+
+    playlist_id = emotion_playlists.get(emotion)
+
+    if playlist_id:
+        sp.start_playback(
+            device_id=device_id,
+            context_uri=f"spotify:playlist:{playlist_id}")
+        return jsonify({"message": "Playing music"})
+    
+    return jsonify({"error": "No playlist found"})
 
 if __name__ == "__main__":
     app.run(debug=True)
