@@ -12,10 +12,12 @@ ChartJS.register(BarElement, CategoryScale, LinearScale);
 
 function Analytics() {
   const [chartData, setChartData] = useState({});
-
   useEffect(() => {
+
+  const fetchData = () => {
     axios.get("http://localhost:5000/analytics")
       .then(res => {
+
         const emotions = res.data.data.map(e => e[0]);
 
         const counts = {};
@@ -30,8 +32,17 @@ function Analytics() {
             data: Object.values(counts)
           }]
         });
+
       });
-  }, []);
+  };
+
+  fetchData(); // initial load
+
+  const interval = setInterval(fetchData, 5000); // 🔥 every 5 sec
+
+  return () => clearInterval(interval);
+
+}, []);
 
   return (
     <div style={{ width: "600px", margin: "auto" }}>

@@ -1,4 +1,4 @@
-import React, { useRef, useState } from "react";
+import React, { useRef, useState, useEffect } from "react";
 import Webcam from "react-webcam";
 import axios from "axios";
 import Analytics from "../Analytics";
@@ -42,36 +42,44 @@ function Dashboard() {
 
   const [emotion, setEmotion] = useState("");
   const [song, setSong] = useState(null);
-  const [loading, setLoading] = useState(false);
 
+  // 🔥 Detect emotion from webcam
   const capture = async () => {
+    try {
+      const imageSrc = webcamRef.current.getScreenshot();
+      const user_id = localStorage.getItem("user_id");
 
-    const imageSrc = webcamRef.current.getScreenshot();
+      const res = await axios.post("http://localhost:5000/detect", {
+        image: imageSrc,
+        user_id
+      });
 
-    const user_id = localStorage.getItem("user_id");
+      const detectedEmotion = res.data.emotion;
 
-    setLoading(true);
+      setEmotion(detectedEmotion);
 
-    const res = await axios.post("http://localhost:5000/detect", {
-      image: imageSrc,
-      user_id
-    });
+      if (emotionMusic[detectedEmotion]) {
+        setSong(emotionMusic[detectedEmotion]);
+      }
 
-    const detectedEmotion = res.data.emotion;
-
-    setEmotion(detectedEmotion);
-
-    if (emotionMusic[detectedEmotion]) {
-      setSong(emotionMusic[detectedEmotion]);
+    } catch (err) {
+      console.log("Error detecting emotion:", err);
     }
-
-    setLoading(false);
   };
+
+  // 🔥 AUTO RUN every 5 seconds
+  useEffect(() => {
+    const interval = setInterval(() => {
+      capture();
+    }, 5000);
+
+    return () => clearInterval(interval);
+  }, []);
 
   return (
     <div style={{ textAlign: "center" }}>
 
-      <h1>Feelix</h1>
+      <h1>Feelix 🎵</h1>
 
       <Webcam
         audio={false}
@@ -82,17 +90,9 @@ function Dashboard() {
 
       <br /><br />
 
-      <button onClick={capture}>
-        Detect Emotion
-      </button>
-
-      <br /><br />
-
-      {loading && <h3>Analyzing...</h3>}
-
-      {emotion && !loading &&
+      {emotion && (
         <h2>Detected Emotion: {emotion}</h2>
-      }
+      )}
 
       {song && (
         <div style={{ marginTop: "20px" }}>
