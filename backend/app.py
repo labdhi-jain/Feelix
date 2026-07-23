@@ -1,84 +1,91 @@
-from flask_cors import CORS
+import os
 import bcrypt
-from database import create_user, get_user
-from flask import Flask, jsonify
-from flask_cors import CORS
-from flask import request
+from fastapi import FastAPI, HTTPException, Depends
+from fastapi.middleware.cors import CORSMiddleware
+from pydantic import BaseModel
+from database import init_db, create_user, get_user, save_emotion, get_emotions
 from emotion import detect_emotion
-from database import init_db, save_emotion, get_emotions
 from spotify import get_auth_url, get_token
 import spotipy
+from typing import Optional
 
+# Initialize database
 init_db()
 
-app = Flask(__name__)
-CORS(app)
-@app.route("/detect", methods=["POST"])
-def detect():
-    data = request.json
+app = FastAPI(title="Feelix API", description="Emotion detection and Spotify playback backend")
 
-    image = data["image"]
-    user_id = data["user_id"]
+# CORS setup
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # Adjust in production
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
-    emotion = detect_emotion(image)
+# Pydantic models for request bodies
+class DetectRequest(BaseModel):
+    image: str
+    user_id: int
 
-    save_emotion(user_id, emotion)
+class RegisterRequest(BaseModel):
+    username: str
+    password: str
 
-    return jsonify({"emotion": emotion})
+class LoginRequest(BaseModel):
+    username: str
+    password: str
 
+class PlayMusicRequest(BaseModel):
+    emotion: str
+    token: str
 
-@app.route("/analytics", methods=["GET"])
+@app.get("/")
+def home():
+    return {"message": "Feelix FastAPI Backend Running"}
+
+@app.post("/detect")
+def detect(data: DetectRequest):
+    try:
+        emotion = detect_emotion(data.image)
+        save_emotion(data.user_id, emotion)
+        return {"emotion": emotion}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/analytics")
 def analytics():
     emotions = get_emotions()
-    return jsonify({"data": emotions})
+    return {"data": emotions}
 
-@app.route("/register", methods=["POST"])
-def register():
-    data = request.json
-
-    username = data["username"]
-    password = data["password"]
-
-    hashed = bcrypt.hashpw(password.encode(), bcrypt.gensalt())
-
+@app.post("/register")
+def register(data: RegisterRequest):
+    hashed = bcrypt.hashpw(data.password.encode(), bcrypt.gensalt())
     try:
-        create_user(username, hashed)
-        return jsonify({"message": "User registered"})
-    except:
-        return jsonify({"error": "User already exists"}), 400
+        create_user(data.username, hashed)
+        return {"message": "User registered"}
+    except Exception as e:
+        raise HTTPException(status_code=400, detail="User already exists")
 
-
-@app.route("/login", methods=["POST"])
-def login():
-    data = request.json
-
-    username = data["username"]
-    password = data["password"]
-
-    user = get_user(username)
-
-    if user and bcrypt.checkpw(password.encode(), user[2]):
-        return jsonify({
+@app.post("/login")
+def login(data: LoginRequest):
+    user = get_user(data.username)
+    if user and bcrypt.checkpw(data.password.encode(), user[2]):
+        return {
             "message": "Login successful",
             "user_id": user[0]
-        })
+        }
+    raise HTTPException(status_code=401, detail="Invalid credentials")
 
-    return jsonify({"error": "Invalid credentials"}), 401
-
-@app.route("/")
-def home():
-    return jsonify({"message": "Feelix Backend Running"})
-
-@app.route("/spotify/login")
+@app.get("/spotify/login")
 def spotify_login():
     url = get_auth_url()
-    return jsonify({"url": url})
+    return {"url": url}
 
-@app.route("/spotify/callback")
-def spotify_callback():
-    code = request.args.get("code")
+@app.get("/spotify/callback")
+def spotify_callback(code: str):
     token = get_token(code)
-    return jsonify(token)
+    return token
 
 emotion_playlists = {
     "happy": "37i9dQZF1DXdPec7aLTmlC",
@@ -87,30 +94,28 @@ emotion_playlists = {
     "neutral": "37i9dQZF1DX4WYpdgoIcn6"
 }
 
-@app.route("/spotify/play", methods=["POST"])
-def play_music():
-    data = request.json
-    emotion = data("emotion")
-    token = data("token")
+@app.post("/spotify/play")
+def play_music(data: PlayMusicRequest):
+    sp = spotipy.Spotify(auth=data.token)
+    try:
+        devices = sp.devices()
+        if not devices.get("devices"):
+            raise HTTPException(status_code=400, detail="No active Spotify device found. Open Spotify app.")
+        
+        device_id = devices["devices"][0]["id"]
+        playlist_id = emotion_playlists.get(data.emotion)
 
-    sp = spotipy.Spotify(auth=token)
-    devices = sp.devices()
-
-    if not devices["devices"]:
-        return jsonify({"error": "No active Spotify device found. Open Spotify app."})
-
-    device_id = devices["devices"][0]["id"]
-
-
-    playlist_id = emotion_playlists.get(emotion)
-
-    if playlist_id:
-        sp.start_playback(
-            device_id=device_id,
-            context_uri=f"spotify:playlist:{playlist_id}")
-        return jsonify({"message": "Playing music"})
-    
-    return jsonify({"error": "No playlist found"})
+        if playlist_id:
+            sp.start_playback(
+                device_id=device_id,
+                context_uri=f"spotify:playlist:{playlist_id}"
+            )
+            return {"message": "Playing music"}
+        else:
+            raise HTTPException(status_code=404, detail="No playlist found for this emotion")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 if __name__ == "__main__":
-    app.run(debug=True)
+    import uvicorn
+    uvicorn.run(app, host="127.0.0.1", port=5000, reload=True)
