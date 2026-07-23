@@ -12,7 +12,17 @@ def detect_emotion(image_data):
         img,
         actions=['emotion'],
         enforce_detection=False,
-        detector_backend='opencv'   # 🔥 THIS IS THE FIX
+        detector_backend='opencv'
     )
 
-    return result[0]['dominant_emotion']
+    analysis = result[0]
+    dominant = analysis.get('dominant_emotion', 'neutral')
+    scores = analysis.get('emotion', {})
+    
+    # Format scores as rounded floats/integers
+    formatted_scores = {k: round(float(v), 1) for k, v in scores.items()}
+
+    return {
+        "dominant_emotion": dominant,
+        "scores": formatted_scores
+    }
